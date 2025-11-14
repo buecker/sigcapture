@@ -5,6 +5,10 @@ yarn-debug.log*
 yarn-error.log*
 package-lock.json
 
+# NPM and NVM
+.npm/
+.nvm
+
 # Logs
 *.log
 logfile.txt
