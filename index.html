@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Guardian Insurance Authorization Forms</title>
-  <script src="https://www.sigplusweb.com/SigWebTablet.js"></script>
+  <script src="SigWebTablet.js"></script>
   <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -20,6 +20,7 @@
       .print-scale-70 { -webkit-transform: scale(0.70); transform: scale(0.70); transform-origin: top left; width: calc(100% / 0.70) !important; padding: 0.25in !important; }
       .print-scale-65 { -webkit-transform: scale(0.65); transform: scale(0.65); transform-origin: top left; width: calc(100% / 0.65) !important; padding: 0.25in !important; }
       .print-scale-60 { -webkit-transform: scale(0.60); transform: scale(0.60); transform-origin: top left; width: calc(100% / 0.60) !important; padding: 0.2in !important; }
+      .print-loss-notice { padding: 0.5in 0.5in 0.5in 0.5in !important; }
       input, textarea { border-bottom: 1px solid #000 !important; background: transparent !important; }
     }
     .signature-button { transition: all 0.2s ease; }
@@ -37,11 +38,15 @@
         dateOfBirth1: '', dateOfBirth2: '', ssn1: '', ssn2: '',
         medicareEnrolled: '', medicareClaimNumber: '', medicareGender: '', ifrClaimNumber: '', refusalReason: '', completingPersonName: '',
         yourName: '', mailingAddress: '', physicalAddress: '', homePhone: '', busPhone: '', cellPhone: '', email: '',
-        dateOfAccident: '', locationOfAccident: '', yearMakeModel: '', licensePlate: '', color: '', vinNumber: '',
+        dateOfAccident: '', locationOfAccident: '', year: '', make: '', model: '', licensePlate: '', color: '', vinNumber: '',
         lienholder: '', damageDescription: '', vehicleLocation: '', accidentDescription: '',
         chargedByPolice: '', chargeDetails: '', acceptingResponsibility: '', responsibilityReason: '',
         insuredWithGuardian: '', insuranceCompanyName: '', filedClaimWithOwnInsurance: '', paidByOwnInsurance: '',
-        amountPaid: '', datePaid: '', witnessesPresent: '', passengers: '', passengersInCar: '',
+        amountPaid: '', datePaid: '',
+        witness1Name: '', witness1Address: '', witness1Phone: '',
+        witness2Name: '', witness2Address: '', witness2Phone: '',
+        witness3Name: '', witness3Address: '', witness3Phone: '',
+        passengers: '', passengersInCar: '',
         wereYouInjured: '', seekingMedicalAttention: '', medicalClaim: '', medicalCarrier: '', anythingElse: '', claimNumber: ''
       });
 
@@ -54,34 +59,45 @@
       const [sigWebStatus, setSigWebStatus] = useState('checking');
       const [showPrintMenu, setShowPrintMenu] = useState(false);
       const [printAllForms, setPrintAllForms] = useState(false);
+      const [tabletTimer, setTabletTimer] = useState(null);
 
       useEffect(() => {
-        if (typeof SigWebTablet === 'undefined') {
+        if (typeof IsSigWebInstalled === 'undefined') {
+          console.error("SigWebTablet.js script not loaded!");
           setSigWebStatus('not_loaded');
           return;
         }
+
         setTimeout(() => {
           try {
-            if (SigWebTablet.IsSigWebInstalled()) {
-              const version = SigWebTablet.GetSigWebVersion();
+            if (IsSigWebInstalled()) {
+              const version = GetSigWebVersion();
               if (!version || version === "1.5") {
+                console.error("SigWeb service not running or not responding.");
                 setSigWebStatus('not_loaded');
               } else {
-                // Try to get tablet model to check if device is connected
-                const model = SigWebTablet.GetTabletModel();
-                if (model && model.length > 0) {
-                  setSigWebStatus('ready');
-                } else {
-                  setSigWebStatus('no_device');
-                }
+                console.log("SigWeb Version:", version);
+                setSigWebStatus('ready');
               }
             } else {
+              console.error("SigWeb service not installed.");
               setSigWebStatus('not_loaded');
             }
           } catch (e) {
-            setSigWebStatus('no_device');
+            console.error("Error checking SigWeb:", e);
+            setSigWebStatus('not_loaded');
           }
         }, 500);
+
+        return () => {
+          try {
+            if (typeof Reset !== 'undefined') {
+              Reset();
+            }
+          } catch (e) {
+            console.error('Error resetting tablet:', e);
+          }
+        };
       }, []);
 
       const handleInputChange = (e) => {
@@ -105,37 +121,113 @@
           return;
         }
 
-        // Define the formats
-        const sigDataFormat = SigWebTablet.SignDataFormat.SigString;
-        const imageFormat = SigWebTablet.ImageFormat.PNG;
+        try {
+          // Create a modal dialog for signature capture
+          const modal = document.createElement('div');
+          modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
 
-        // Success callback
-        const onSignSuccess = (sigString) => {
-          console.log("Signature captured successfully");
+          const dialog = document.createElement('div');
+          dialog.style.cssText = 'background:white;padding:20px;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);';
 
-          // Get the image data to display
-          SigWebTablet.GetSignatureImage((imgData) => {
-            const imageData = 'data:image/png;base64,' + imgData;
-            if (formNum === 1) setSigImage1(imageData);
-            else if (formNum === 2) setSigImage2(imageData);
-            else if (formNum === 3) setSigImage3(imageData);
-            else if (formNum === 4) setSigImage4(imageData);
-          }, imageFormat);
-        };
+          const title = document.createElement('h3');
+          title.textContent = 'Please sign on the signature pad';
+          title.style.cssText = 'margin:0 0 15px 0;text-align:center;';
 
-        // Error callback
-        const onSignError = (errorMsg) => {
-          console.error("Signature Error:", errorMsg);
-          alert("Signature capture failed or was cancelled.");
-        };
+          const canvas = document.createElement('canvas');
+          canvas.id = 'sigCanvas' + formNum;
+          canvas.width = 500;
+          canvas.height = 100;
+          canvas.style.cssText = 'border:1px solid #ccc;display:block;margin:0 auto 15px auto;';
 
-        // Call the Sign function
-        SigWebTablet.Sign(
-          onSignSuccess,
-          onSignError,
-          sigDataFormat,
-          imageFormat
-        );
+          const buttonContainer = document.createElement('div');
+          buttonContainer.style.cssText = 'display:flex;gap:10px;justify-content:center;';
+
+          const acceptBtn = document.createElement('button');
+          acceptBtn.textContent = 'Accept';
+          acceptBtn.style.cssText = 'px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700';
+          acceptBtn.className = 'px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700';
+
+          const clearBtn = document.createElement('button');
+          clearBtn.textContent = 'Clear';
+          clearBtn.style.cssText = 'px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700';
+          clearBtn.className = 'px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700';
+
+          const cancelBtn = document.createElement('button');
+          cancelBtn.textContent = 'Cancel';
+          cancelBtn.style.cssText = 'px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700';
+          cancelBtn.className = 'px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700';
+
+          buttonContainer.appendChild(clearBtn);
+          buttonContainer.appendChild(acceptBtn);
+          buttonContainer.appendChild(cancelBtn);
+
+          dialog.appendChild(title);
+          dialog.appendChild(canvas);
+          dialog.appendChild(buttonContainer);
+          modal.appendChild(dialog);
+          document.body.appendChild(modal);
+
+          // Get canvas context
+          const ctx = canvas.getContext('2d');
+
+          // Clear the canvas
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          // Clear the tablet
+          ClearTablet();
+
+          // Set image output size for GetSigImageB64
+          SetImageXSize(500);
+          SetImageYSize(100);
+
+          // Activate the tablet (this sets display size automatically from canvas)
+          const tmr = SetTabletState(1, ctx, 50);
+          setTabletTimer(tmr);
+
+          console.log("Tablet activated, timer:", tmr);
+
+          // Clear button handler
+          clearBtn.onclick = () => {
+            ClearTablet();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+          };
+
+          // Accept button handler
+          acceptBtn.onclick = () => {
+            const numPoints = NumberOfTabletPoints();
+            console.log("Number of points:", numPoints);
+            if (numPoints === 0) {
+              alert('Please sign before accepting.');
+              return;
+            }
+
+            // Get signature image
+            GetSigImageB64((imgData) => {
+              console.log("Got signature image, length:", imgData ? imgData.length : 0);
+              const imageData = 'data:image/png;base64,' + imgData;
+              if (formNum === 1) setSigImage1(imageData);
+              else if (formNum === 2) setSigImage2(imageData);
+              else if (formNum === 3) setSigImage3(imageData);
+              else if (formNum === 4) setSigImage4(imageData);
+
+              // Cleanup
+              SetTabletState(0, tmr);
+              ClearTablet();
+              document.body.removeChild(modal);
+            });
+          };
+
+          // Cancel button handler
+          cancelBtn.onclick = () => {
+            SetTabletState(0, tmr);
+            ClearTablet();
+            document.body.removeChild(modal);
+          };
+
+        } catch (e) {
+          console.error('Error capturing signature:', e);
+          alert('Error capturing signature: ' + e.message);
+        }
       };
 
       const clearSignature = (formNum) => {
@@ -253,7 +345,6 @@
                       <div>9716 Estate Thomas Suite 200</div>
                       <div>St. Thomas, VI 00802</div>
                       <div>Tel: (340)776-8050</div>
-                      <div>Fax: (340)774-2343</div>
                     </div>
                     <div className="text-right font-bold">
                       EMPLOYMENT RECORDS<br/>AUTHORIZATION
@@ -317,7 +408,6 @@
                       <div>9716 Estate Thomas Suite 200</div>
                       <div>St. Thomas, VI 00802</div>
                       <div>Tel: (340)776-8050</div>
-                      <div>Fax: (340)774-2343</div>
                     </div>
                     <div className="text-right font-bold">
                       INSURANCE RECORDS<br/>AUTHORIZATION
@@ -627,322 +717,396 @@
                 </div>
             )}
 
-            {/* Form 4: Loss Notice (2 pages) */}
-            {(currentForm === 4 || printAllForms) && (
-              <>
-                {/* Page 1 */}
-                <div className="bg-white rounded-lg shadow-md p-8 print-page print-scale-75">
-                  <div className="border-2 border-gray-300 p-6">
-                    <div className="flex justify-between items-center mb-3">
-                      <img src="guardian.png" alt="Guardian" className="h-10" />
-                      <div className="text-center">
-                        <h2 className="text-base font-bold">LOSS NOTICE - AUTOMOBILE</h2>
-                        <div className="text-xs">FOR CLAIMANTS</div>
-                      </div>
-                      <div className="text-xs">Page 1 of 2</div>
+            {/* Form 4: Loss Notice - Page 1 */}
+            {(((currentForm === 4) && (currentSubPage === 1 || currentSubPage === null)) || printAllForms) && (
+              <div className="bg-white rounded-lg shadow-md p-4 print-page print-loss-notice">
+                <div className="border-2 border-gray-300 p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <img src="guardian.png" alt="Guardian" className="h-10" />
+                    <div className="text-center">
+                      <h2 className="text-base font-bold">LOSS NOTICE - AUTOMOBILE</h2>
+                      <div className="text-xs">FOR CLAIMANTS</div>
                     </div>
+                    <div className="text-xs">Page 1 of 2</div>
+                  </div>
 
-                    <div className="space-y-2 text-sm">
+                  <div className="text-sm">
+                    <div className="flex items-center">
+                      <label className="font-medium w-1/4">DATE:</label>
+                      <input type="date" name="dateForm1" value={formData.dateForm1} onChange={handleInputChange}
+                        className="w-3/4 border-b px-2 py-1 focus:outline-none" />
+                    </div>
+                    <div className="border-t my-2"></div>
+                    <div className="flex items-center">
+                      <label className="font-medium w-1/3">INSURED/POLICYHOLDER'S NAME:</label>
+                      <input type="text" name="fullName" value={formData.fullName} onChange={handleInputChange}
+                        className="w-2/3 border-b px-2 py-1 focus:outline-none" />
+                    </div>
+                    <div className="flex items-center">
+                      <label className="font-medium w-1/4">Your Name:</label>
+                      <input type="text" name="yourName" value={formData.yourName} onChange={handleInputChange}
+                        className="w-3/4 border-b px-2 py-1 focus:outline-none" />
+                    </div>
+                    <div className="flex items-center">
+                      <label className="font-medium w-1/4">Mailing Address:</label>
+                      <input type="text" name="mailingAddress" value={formData.mailingAddress} onChange={handleInputChange}
+                        className="w-3/4 border-b px-2 py-1 focus:outline-none" />
+                    </div>
+                    <div className="flex items-center">
+                      <label className="font-medium w-1/4">Physical Address:</label>
+                      <input type="text" name="physicalAddress" value={formData.physicalAddress} onChange={handleInputChange}
+                        className="w-3/4 border-b px-2 py-1 focus:outline-none" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="flex items-center">
+                        <label className="font-medium w-1/2">Mobile Phone:</label>
+                        <input type="tel" name="cellPhone" value={formData.cellPhone} onChange={handleInputChange}
+                          className="w-1/2 border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                      <div className="flex items-center">
+                        <label className="font-medium w-1/2">Bus. Phone:</label>
+                        <input type="tel" name="busPhone" value={formData.busPhone} onChange={handleInputChange}
+                          className="w-1/2 border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                      <div className="flex items-center">
+                        <label className="font-medium w-1/2">Home Phone:</label>
+                        <input type="tel" name="homePhone" value={formData.homePhone} onChange={handleInputChange}
+                          className="w-1/2 border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <label className="font-medium w-1/4">Email:</label>
+                      <input type="email" name="email" value={formData.email} onChange={handleInputChange}
+                        className="w-3/4 border-b px-2 py-1 focus:outline-none" />
+                    </div>
+                    <div className="border-t-4 border-black my-2"></div>
+                    <div className="font-bold text-xs">(Please answer all questions)</div>
+                    <div className="flex items-center">
+                      <label className="font-medium w-1/4">Date of Accident:</label>
+                      <input type="date" name="dateOfAccident" value={formData.dateOfAccident} onChange={handleInputChange}
+                        className="w-3/4 border-b px-2 py-1 focus:outline-none" />
+                    </div>
+                    <div className="flex items-center">
+                      <label className="font-medium w-1/4">Location of Accident:</label>
+                      <input type="text" name="locationOfAccident" value={formData.locationOfAccident} onChange={handleInputChange}
+                        className="w-3/4 border-b px-2 py-1 focus:outline-none" />
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      <div className="flex items-center">
+                        <label className="font-medium w-1/2">Year:</label>
+                        <input type="text" name="year" value={formData.year} onChange={handleInputChange}
+                          className="w-1/2 border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                      <div className="flex items-center">
+                        <label className="font-medium w-1/2">Make:</label>
+                        <input type="text" name="make" value={formData.make} onChange={handleInputChange}
+                          className="w-1/2 border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                      <div className="flex items-center">
+                        <label className="font-medium w-1/2">Model:</label>
+                        <input type="text" name="model" value={formData.model} onChange={handleInputChange}
+                          className="w-1/2 border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                      <div className="flex items-center">
+                        <label className="font-medium w-1/2">Color:</label>
+                        <input type="text" name="color" value={formData.color} onChange={handleInputChange}
+                          className="w-1/2 border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex items-center">
+                        <label className="font-medium w-1/4">License Plate:</label>
+                        <input type="text" name="licensePlate" value={formData.licensePlate} onChange={handleInputChange}
+                          className="w-3/4 border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                      <div className="flex items-center">
+                        <label className="font-medium w-1/4">VIN #:</label>
+                        <input type="text" name="vinNumber" value={formData.vinNumber} onChange={handleInputChange}
+                          className="w-3/4 border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <label className="font-medium w-1/4">Lienholder/Bank on vehicle:</label>
+                      <input type="text" name="lienholder" value={formData.lienholder} onChange={handleInputChange}
+                        className="w-3/4 border-b px-2 py-1 focus:outline-none" />
+                    </div>
+                    <div className="flex items-center">
+                      <label className="font-medium w-1/4">Identify Damage to Your Vehicle:</label>
+                      <textarea name="damageDescription" value={formData.damageDescription} onChange={handleInputChange}
+                        rows="1" className="w-3/4 border px-2 py-1 focus:outline-none"></textarea>
+                    </div>
+                    <div className="flex items-center">
+                      <label className="font-medium w-1/4">Where is vehicle located?:</label>
+                      <input type="text" name="vehicleLocation" value={formData.vehicleLocation} onChange={handleInputChange}
+                        className="w-3/4 border-b px-2 py-1 focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="block font-medium mb-1">How did the Accident Occur? (Brief Description):</label>
+                      <textarea name="accidentDescription" value={formData.accidentDescription} onChange={handleInputChange}
+                        rows="2" className="w-full border px-2 py-1 focus:outline-none"></textarea>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-4 mb-2">
+                        <span className="text-xs">Were you charged by the police in this accident?</span>
+                        <label className="flex items-center gap-1">
+                          <input type="checkbox" name="chargedByPolice" checked={formData.chargedByPolice === 'yes'}
+                            onChange={(e) => handleInputChange({target: {name: 'chargedByPolice', value: e.target.checked ? 'yes' : ''}})}
+                            className="print:hidden" />
+                          <span>Yes</span>
+                        </label>
+                        <label className="flex items-center gap-1">
+                          <input type="checkbox" name="chargedByPolice" checked={formData.chargedByPolice === 'no'}
+                            onChange={(e) => handleInputChange({target: {name: 'chargedByPolice', value: e.target.checked ? 'no' : ''}})}
+                            className="print:hidden" />
+                          <span>No</span>
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs">What was the charge?:</span>
+                        <input type="text" name="chargeDetails" value={formData.chargeDetails} onChange={handleInputChange}
+                          className="flex-1 border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-4 mb-2">
+                        <span className="text-xs">Are you accepting responsibility for this accident?</span>
+                        <label className="flex items-center gap-1">
+                          <input type="checkbox" name="acceptingResponsibility" checked={formData.acceptingResponsibility === 'yes'}
+                            onChange={(e) => handleInputChange({target: {name: 'acceptingResponsibility', value: e.target.checked ? 'yes' : ''}})}
+                            className="print:hidden" />
+                          <span>Yes</span>
+                        </label>
+                        <label className="flex items-center gap-1">
+                          <input type="checkbox" name="acceptingResponsibility" checked={formData.acceptingResponsibility === 'no'}
+                            onChange={(e) => handleInputChange({target: {name: 'acceptingResponsibility', value: e.target.checked ? 'no' : ''}})}
+                            className="print:hidden" />
+                          <span>No</span>
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs">If no, explain why?:</span>
+                        <input type="text" name="responsibilityReason" value={formData.responsibilityReason} onChange={handleInputChange}
+                          className="flex-1 border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                    </div>
+                    <div className="border-t my-2"></div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-xs">Are you Insured with Guardian?</span>
+                      <label className="flex items-center gap-1">
+                        <input type="checkbox" name="insuredWithGuardian" checked={formData.insuredWithGuardian === 'yes'}
+                          onChange={(e) => handleInputChange({target: {name: 'insuredWithGuardian', value: e.target.checked ? 'yes' : ''}})}
+                          className="print:hidden" />
+                        <span>Yes</span>
+                      </label>
+                      <label className="flex items-center gap-1">
+                        <input type="checkbox" name="insuredWithGuardian" checked={formData.insuredWithGuardian === 'no'}
+                          onChange={(e) => handleInputChange({target: {name: 'insuredWithGuardian', value: e.target.checked ? 'no' : ''}})}
+                          className="print:hidden" />
+                        <span>No</span>
+                      </label>
+                      <div className="flex items-center gap-2 flex-1">
+                        <span className="text-xs">Name of Insurance Co or Agent:</span>
+                        <input type="text" name="insuranceCompanyName" value={formData.insuranceCompanyName} onChange={handleInputChange}
+                          className="flex-1 border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-xs">Have you Filed a Claim with your own Insurance Company?:</span>
+                      <label className="flex items-center gap-1">
+                        <input type="checkbox" name="filedClaimWithOwnInsurance" value="yes" checked={formData.filedClaimWithOwnInsurance === 'yes'} onChange={(e) => handleInputChange({target: {name: 'filedClaimWithOwnInsurance', value: e.target.checked ? 'yes' : ''}})} className="print:hidden" />
+                        <span>Yes</span>
+                      </label>
+                      <label className="flex items-center gap-1">
+                        <input type="checkbox" name="filedClaimWithOwnInsurance" value="no" checked={formData.filedClaimWithOwnInsurance === 'no'} onChange={(e) => handleInputChange({target: {name: 'filedClaimWithOwnInsurance', value: e.target.checked ? 'no' : ''}})} className="print:hidden" />
+                        <span>No</span>
+                      </label>
+                    </div>
+                    <div>
+                      <label className="block font-medium mb-1">Have you been paid by your own Insurance Company?:</label>
+                      <input type="text" name="paidByOwnInsurance" value={formData.paidByOwnInsurance} onChange={handleInputChange}
+                        className="w-full border-b px-2 py-1 focus:outline-none" />
+                    </div>
+                    <div className="text-center mt-4">
+                      <div className="text-xs">CLAIM #_______________</div>
+                    </div>
+                    <div className="bg-gray-100 p-2 mb-2 text-xs">
+                      <strong>NOTE:</strong> You must notify Guardian if you have filed a claim under your own policy with your own Insurance Company for this accident or if it is your intention to file a claim under your own policy for this accident. Thank you.
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block font-medium mb-1">DATE:</label>
+                        <label className="block font-medium mb-1">Amount Paid:</label>
+                        <input type="text" name="amountPaid" value={formData.amountPaid} onChange={handleInputChange}
+                          className="w-full border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                      <div className="flex items-center">
+                        <label className="font-medium mr-2">Date Paid:</label>
+                        <input type="date" name="datePaid" value={formData.datePaid} onChange={handleInputChange}
+                          className="flex-1 border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Form 4: Loss Notice - Page 2 */}
+            {(((currentForm === 4) && (currentSubPage === 2 || currentSubPage === null)) || printAllForms) && (
+              <div className="bg-white rounded-lg shadow-md p-4 print-page print-loss-notice">
+                <div className="border-2 border-gray-300 p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <img src="guardian.png" alt="Guardian" className="h-10" />
+                    <div className="text-center">
+                      <h2 className="text-base font-bold">LOSS NOTICE - AUTOMOBILE</h2>
+                      <div className="text-xs">FOR CLAIMANTS</div>
+                    </div>
+                    <div className="text-xs">Page 2 of 2</div>
+                  </div>
+
+                  <div className="text-sm">
+                    <div className="space-y-2">
+                      <div className="text-xs font-medium mb-1">Were there any witnesses to this accident?  If so, list their names, telephone number and address.</div>
+                      <div className="grid grid-cols-3 gap-2">
+                          <div>
+                              <label className="block font-medium mb-1">Witness:</label>
+                              <input type="text" name="witness1Name" value={formData.witness1Name} onChange={handleInputChange} className="w-full border-b px-2 py-1 focus:outline-none" />
+                          </div>
+                          <div>
+                              <label className="block font-medium mb-1">Address:</label>
+                              <input type="text" name="witness1Address" value={formData.witness1Address} onChange={handleInputChange} className="w-full border-b px-2 py-1 focus:outline-none" />
+                          </div>
+                          <div>
+                              <label className="block font-medium mb-1">Phone:</label>
+                              <input type="text" name="witness1Phone" value={formData.witness1Phone} onChange={handleInputChange} className="w-full border-b px-2 py-1 focus:outline-none" />
+                          </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                          <div>
+                              <label className="block font-medium mb-1">Witness:</label>
+                              <input type="text" name="witness2Name" value={formData.witness2Name} onChange={handleInputChange} className="w-full border-b px-2 py-1 focus:outline-none" />
+                          </div>
+                          <div>
+                              <label className="block font-medium mb-1">Address:</label>
+                              <input type="text" name="witness2Address" value={formData.witness2Address} onChange={handleInputChange} className="w-full border-b px-2 py-1 focus:outline-none" />
+                          </div>
+                          <div>
+                              <label className="block font-medium mb-1">Phone:</label>
+                              <input type="text" name="witness2Phone" value={formData.witness2Phone} onChange={handleInputChange} className="w-full border-b px-2 py-1 focus:outline-none" />
+                          </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                          <div>
+                              <label className="block font-medium mb-1">Witness:</label>
+                              <input type="text" name="witness3Name" value={formData.witness3Name} onChange={handleInputChange} className="w-full border-b px-2 py-1 focus:outline-none" />
+                          </div>
+                          <div>
+                              <label className="block font-medium mb-1">Address:</label>
+                              <input type="text" name="witness3Address" value={formData.witness3Address} onChange={handleInputChange} className="w-full border-b px-2 py-1 focus:outline-none" />
+                          </div>
+                          <div>
+                              <label className="block font-medium mb-1">Phone:</label>
+                              <input type="text" name="witness3Phone" value={formData.witness3Phone} onChange={handleInputChange} className="w-full border-b px-2 py-1 focus:outline-none" />
+                          </div>
+                      </div>
+                    </div>
+                    <div className="font-bold text-xs my-2">TELL US ABOUT ANY INJURIES (Please answer all questions)</div>
+                    <div>
+                      <div className="flex items-center gap-4 mb-2">
+                        <span className="text-xs">Were there any passengers in your car?</span>
+                        <label className="flex items-center gap-1">
+                          <input type="checkbox" name="passengersInCar" checked={formData.passengersInCar === 'yes'}
+                            onChange={(e) => handleInputChange({target: {name: 'passengersInCar', value: e.target.checked ? 'yes' : ''}})}
+                            className="print:hidden" />
+                          <span>Yes</span>
+                        </label>
+                        <label className="flex items-center gap-1">
+                          <input type="checkbox" name="passengersInCar" checked={formData.passengersInCar === 'no'}
+                            onChange={(e) => handleInputChange({target: {name: 'passengersInCar', value: e.target.checked ? 'no' : ''}})}
+                            className="print:hidden" />
+                          <span>No</span>
+                        </label>
+                      </div>
+                      <label className="block font-medium mb-1 text-xs">If so, list names:</label>
+                      <textarea name="passengers" value={formData.passengers} onChange={handleInputChange}
+                        rows="1" className="w-full border px-2 py-1 focus:outline-none"></textarea>
+                    </div>
+                    <div>
+                      <div className="bg-yellow-50 p-2 rounded text-xs mb-1">
+                        <strong>NOTE:</strong> The attached Medical, Employment and Insurance Authorizations are to be signed only if you intend to file a claim for injuries.
+                        Were you injured? If so, what is the nature of your injury?:
+                      </div>
+                      <textarea name="wereYouInjured" value={formData.wereYouInjured} onChange={handleInputChange}
+                        rows="1" className="w-full border px-2 py-1 focus:outline-none"></textarea>
+                    </div>
+                    <div>
+                      <label className="block font-medium mb-1">Do you intend to seek medical attention?:</label>
+                      <textarea name="seekingMedicalAttention" value={formData.seekingMedicalAttention} onChange={handleInputChange}
+                        rows="1" className="w-full border px-2 py-1 focus:outline-none"></textarea>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-4 mb-2">
+                        <span className="text-xs">Did you place your medical injury claim under your own insurance?</span>
+                        <label className="flex items-center gap-1">
+                          <input type="checkbox" name="medicalClaim" checked={formData.medicalClaim === 'yes'}
+                            onChange={(e) => handleInputChange({target: {name: 'medicalClaim', value: e.target.checked ? 'yes' : ''}})}
+                            className="print:hidden" />
+                          <span>Yes</span>
+                        </label>
+                        <label className="flex items-center gap-1">
+                          <input type="checkbox" name="medicalClaim" checked={formData.medicalClaim === 'no'}
+                            onChange={(e) => handleInputChange({target: {name: 'medicalClaim', value: e.target.checked ? 'no' : ''}})}
+                            className="print:hidden" />
+                          <span>No</span>
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs">If yes, Name of Medical Carrier:</span>
+                        <input type="text" name="medicalCarrier" value={formData.medicalCarrier} onChange={handleInputChange}
+                          className="flex-1 border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                    </div>
+                    <div className="border-t my-1"></div>
+                    <div>
+                      <label className="block font-medium mb-1">Is there anything else you would like us to know regarding this accident/incident?:</label>
+                      <textarea name="anythingElse" value={formData.anythingElse} onChange={handleInputChange}
+                        rows="1" className="w-full border px-2 py-1 focus:outline-none"></textarea>
+                    </div>
+                    <div className="border-t-4 border-black my-1"></div>
+                    <div className="text-xs leading-relaxed mb-2 font-bold">
+                      I represent to Guardian Insurance Company by my signature on this document, that the statement and information given on this Loss Notice document is true and correct to the best of my knowledge. I further represent to Guardian that no information regarding this accident/incident has been concealed or misrepresented in any way and the information is freely given in Guardian's use.
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      <div>
+                        <label className="block font-medium mb-1 text-xs">DATE:</label>
                         <input type="date" name="dateForm1" value={formData.dateForm1} onChange={handleInputChange}
                           className="w-full border-b px-2 py-1 focus:outline-none" />
                       </div>
-                      <div className="border-t my-2"></div>
                       <div>
-                        <label className="block font-medium mb-1">INSURED/POLICYHOLDER'S NAME:</label>
-                        <input type="text" name="fullName" value={formData.fullName} onChange={handleInputChange}
+                        <label className="block font-medium mb-1 text-xs">PRINT NAME:</label>
+                        <input type="text" name="printName2" value={formData.printName2} onChange={handleInputChange}
                           className="w-full border-b px-2 py-1 focus:outline-none" />
                       </div>
-                      <div>
-                        <label className="block font-medium mb-1">Your Name:</label>
-                        <input type="text" name="yourName" value={formData.yourName} onChange={handleInputChange}
-                          className="w-full border-b px-2 py-1 focus:outline-none" />
-                      </div>
-                      <div>
-                        <label className="block font-medium mb-1">Mailing Address:</label>
-                        <input type="text" name="mailingAddress" value={formData.mailingAddress} onChange={handleInputChange}
-                          className="w-full border-b px-2 py-1 focus:outline-none" />
-                      </div>
-                      <div>
-                        <label className="block font-medium mb-1">Physical Address:</label>
-                        <input type="text" name="physicalAddress" value={formData.physicalAddress} onChange={handleInputChange}
-                          className="w-full border-b px-2 py-1 focus:outline-none" />
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <label className="block font-medium mb-1">Home Phone:</label>
-                          <input type="tel" name="homePhone" value={formData.homePhone} onChange={handleInputChange}
-                            className="w-full border-b px-2 py-1 focus:outline-none" />
-                        </div>
-                        <div>
-                          <label className="block font-medium mb-1">Bus. Phone:</label>
-                          <input type="tel" name="busPhone" value={formData.busPhone} onChange={handleInputChange}
-                            className="w-full border-b px-2 py-1 focus:outline-none" />
-                        </div>
-                        <div>
-                          <label className="block font-medium mb-1">Cell Phone:</label>
-                          <input type="tel" name="cellPhone" value={formData.cellPhone} onChange={handleInputChange}
-                            className="w-full border-b px-2 py-1 focus:outline-none" />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block font-medium mb-1">Email:</label>
-                        <input type="email" name="email" value={formData.email} onChange={handleInputChange}
-                          className="w-full border-b px-2 py-1 focus:outline-none" />
-                      </div>
-                      <div className="border-t my-2"></div>
-                      <div className="font-bold text-xs">(Please answer all questions)</div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block font-medium mb-1">Date of Accident:</label>
-                          <input type="date" name="dateOfAccident" value={formData.dateOfAccident} onChange={handleInputChange}
-                            className="w-full border-b px-2 py-1 focus:outline-none" />
-                        </div>
-                        <div>
-                          <label className="block font-medium mb-1">Location of Accident:</label>
-                          <input type="text" name="locationOfAccident" value={formData.locationOfAccident} onChange={handleInputChange}
-                            className="w-full border-b px-2 py-1 focus:outline-none" />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block font-medium mb-1">Year / Make / Model of Car:</label>
-                        <input type="text" name="yearMakeModel" value={formData.yearMakeModel} onChange={handleInputChange}
-                          className="w-full border-b px-2 py-1 focus:outline-none" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block font-medium mb-1">License Plate:</label>
-                          <input type="text" name="licensePlate" value={formData.licensePlate} onChange={handleInputChange}
-                            className="w-full border-b px-2 py-1 focus:outline-none" />
-                        </div>
-                        <div>
-                          <label className="block font-medium mb-1">Color:</label>
-                          <input type="text" name="color" value={formData.color} onChange={handleInputChange}
-                            className="w-full border-b px-2 py-1 focus:outline-none" />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block font-medium mb-1">VIN #:</label>
-                        <input type="text" name="vinNumber" value={formData.vinNumber} onChange={handleInputChange}
-                          className="w-full border-b px-2 py-1 focus:outline-none" />
-                      </div>
-                      <div>
-                        <label className="block font-medium mb-1">Lienholder/Bank on vehicle:</label>
-                        <input type="text" name="lienholder" value={formData.lienholder} onChange={handleInputChange}
-                          className="w-full border-b px-2 py-1 focus:outline-none" />
-                      </div>
-                      <div>
-                        <label className="block font-medium mb-1">Identify Damage to Your Vehicle:</label>
-                        <textarea name="damageDescription" value={formData.damageDescription} onChange={handleInputChange}
-                          rows="1" className="w-full border px-2 py-1 focus:outline-none"></textarea>
-                      </div>
-                      <div>
-                        <label className="block font-medium mb-1">Where is vehicle located?:</label>
-                        <input type="text" name="vehicleLocation" value={formData.vehicleLocation} onChange={handleInputChange}
-                          className="w-full border-b px-2 py-1 focus:outline-none" />
-                      </div>
+                      <SignatureField formNum={4} sigImage={sigImage4} label="SIGNATURE" />
+                    </div>
+                    <div className="font-bold text-xs">IMPORTANT! (PLEASE REVIEW) - Our Claims Staff will advise you if any additional information/documentation is required for your particular claim.</div>
+                    <div className="text-xs">
+                      <ol className="list-decimal list-inside mt-1 space-y-0.5">
+                        <li>Storage of vehicles at any location is NOT covered.</li>
+                        <li>A Police Report is required for ALL accidents/incidents required – detailing damage and cost to repair your vehicle.</li>
+                        <li>An Estimate of Damage from a Guardian Preferred Repair Facility/Adjuster will advise.</li>
+                        <li>The Company (Guardian) may require, at its discretion, another estimate from a chosen Preferred Repair Facility. Adjuster will advise.</li>
+                        <li>Photos of the damage to the vehicle or property is required. An inspection may be set up by the Company at our discretion.</li>
+                        <li>Copies of your current vehicle Registration and Driver's License are required.</li>
+                        <li>If your vehicle has been declared a Total Loss at a Constructive Total Loss – the Bill of Sale and Title may be required. Adjuster will advise.</li>
+                      </ol>
+                      <p className="mt-2 font-bold">Our Claims staff is available to answer any questions or concerns you may have regarding the Claims Process. Please contact us at 340-776-8050 or claimsvi@guardianinsurance.com.</p>
+                      <p className="mt-1 font-bold">Thank you for your Loss Notice submission. Upon confirmation of coverage, our staff will be in touch with you to begin the processing of your claim.</p>
+                    </div>
+                    <div className="text-center mt-2">
+                      <div className="text-xs">CLAIM #_______________</div>
                     </div>
                   </div>
                 </div>
-
-                {/* Page 2 */}
-                <div className="bg-white rounded-lg shadow-md p-8 print-page print-scale-75">
-                  <div className="border-2 border-gray-300 p-6">
-                    <div className="flex justify-between items-center mb-3">
-                      <img src="guardian.png" alt="Guardian" className="h-10" />
-                      <div className="text-xs">Page 2 of 2</div>
-                    </div>
-
-                    <div className="space-y-2 text-sm">
-                      <div>
-                        <label className="block font-medium mb-1">How did the Accident Occur? (Brief Description):</label>
-                        <textarea name="accidentDescription" value={formData.accidentDescription} onChange={handleInputChange}
-                          rows="2" className="w-full border px-2 py-1 focus:outline-none"></textarea>
-                      </div>
-
-                      <div>
-                        <div className="flex items-center gap-4 mb-2">
-                          <span className="text-xs">Were you charged by the police in this accident?</span>
-                          <label className="flex items-center gap-1">
-                            <input type="checkbox" name="chargedByPolice" checked={formData.chargedByPolice === 'yes'}
-                              onChange={(e) => handleInputChange({target: {name: 'chargedByPolice', value: e.target.checked ? 'yes' : ''}})}
-                              className="print:hidden" />
-                            <span>Yes</span>
-                          </label>
-                          <label className="flex items-center gap-1">
-                            <input type="checkbox" name="chargedByPolice" checked={formData.chargedByPolice === 'no'}
-                              onChange={(e) => handleInputChange({target: {name: 'chargedByPolice', value: e.target.checked ? 'no' : ''}})}
-                              className="print:hidden" />
-                            <span>No</span>
-                          </label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs">What was the charge?:</span>
-                          <input type="text" name="chargeDetails" value={formData.chargeDetails} onChange={handleInputChange}
-                            className="flex-1 border-b px-2 py-1 focus:outline-none" />
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="flex items-center gap-4 mb-2">
-                          <span className="text-xs">Are you accepting responsibility for this accident?</span>
-                          <label className="flex items-center gap-1">
-                            <input type="checkbox" name="acceptingResponsibility" checked={formData.acceptingResponsibility === 'yes'}
-                              onChange={(e) => handleInputChange({target: {name: 'acceptingResponsibility', value: e.target.checked ? 'yes' : ''}})}
-                              className="print:hidden" />
-                            <span>Yes</span>
-                          </label>
-                          <label className="flex items-center gap-1">
-                            <input type="checkbox" name="acceptingResponsibility" checked={formData.acceptingResponsibility === 'no'}
-                              onChange={(e) => handleInputChange({target: {name: 'acceptingResponsibility', value: e.target.checked ? 'no' : ''}})}
-                              className="print:hidden" />
-                            <span>No</span>
-                          </label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs">If no, explain why?:</span>
-                          <input type="text" name="responsibilityReason" value={formData.responsibilityReason} onChange={handleInputChange}
-                            className="flex-1 border-b px-2 py-1 focus:outline-none" />
-                        </div>
-                      </div>
-
-                      <div className="border-t my-2"></div>
-
-                      <div>
-                        <div className="flex items-center gap-4 mb-2">
-                          <span className="text-xs">Are you Insured with Guardian?</span>
-                          <label className="flex items-center gap-1">
-                            <input type="checkbox" name="insuredWithGuardian" checked={formData.insuredWithGuardian === 'yes'}
-                              onChange={(e) => handleInputChange({target: {name: 'insuredWithGuardian', value: e.target.checked ? 'yes' : ''}})}
-                              className="print:hidden" />
-                            <span>Yes</span>
-                          </label>
-                          <label className="flex items-center gap-1">
-                            <input type="checkbox" name="insuredWithGuardian" checked={formData.insuredWithGuardian === 'no'}
-                              onChange={(e) => handleInputChange({target: {name: 'insuredWithGuardian', value: e.target.checked ? 'no' : ''}})}
-                              className="print:hidden" />
-                            <span>No</span>
-                          </label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs">Name of Insurance Company or Agent:</span>
-                          <input type="text" name="insuranceCompanyName" value={formData.insuranceCompanyName} onChange={handleInputChange}
-                            className="flex-1 border-b px-2 py-1 focus:outline-none" />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block font-medium mb-1">Have you Filed a Claim with your own Insurance Company?:</label>
-                        <input type="text" name="filedClaimWithOwnInsurance" value={formData.filedClaimWithOwnInsurance} onChange={handleInputChange}
-                          className="w-full border-b px-2 py-1 focus:outline-none" />
-                      </div>
-
-                      <div>
-                        <label className="block font-medium mb-1">Have you been paid by your own Insurance Company?:</label>
-                        <input type="text" name="paidByOwnInsurance" value={formData.paidByOwnInsurance} onChange={handleInputChange}
-                          className="w-full border-b px-2 py-1 focus:outline-none" />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block font-medium mb-1">Amount Paid:</label>
-                          <input type="text" name="amountPaid" value={formData.amountPaid} onChange={handleInputChange}
-                            className="w-full border-b px-2 py-1 focus:outline-none" />
-                        </div>
-                        <div>
-                          <label className="block font-medium mb-1">Date Paid:</label>
-                          <input type="date" name="datePaid" value={formData.datePaid} onChange={handleInputChange}
-                            className="w-full border-b px-2 py-1 focus:outline-none" />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block font-medium mb-1">Were there any witnesses?:</label>
-                        <textarea name="witnessesPresent" value={formData.witnessesPresent} onChange={handleInputChange}
-                          rows="1" className="w-full border px-2 py-1 focus:outline-none"></textarea>
-                      </div>
-
-                      <div className="font-bold text-xs my-2">TELL US ABOUT ANY INJURIES (Please answer all questions)</div>
-
-                      <div>
-                        <div className="flex items-center gap-4 mb-2">
-                          <span className="text-xs">Were there any passengers in your car?</span>
-                          <label className="flex items-center gap-1">
-                            <input type="checkbox" name="passengersInCar" checked={formData.passengersInCar === 'yes'}
-                              onChange={(e) => handleInputChange({target: {name: 'passengersInCar', value: e.target.checked ? 'yes' : ''}})}
-                              className="print:hidden" />
-                            <span>Yes</span>
-                          </label>
-                          <label className="flex items-center gap-1">
-                            <input type="checkbox" name="passengersInCar" checked={formData.passengersInCar === 'no'}
-                              onChange={(e) => handleInputChange({target: {name: 'passengersInCar', value: e.target.checked ? 'no' : ''}})}
-                              className="print:hidden" />
-                            <span>No</span>
-                          </label>
-                        </div>
-                        <label className="block font-medium mb-1 text-xs">If so, list names:</label>
-                        <textarea name="passengers" value={formData.passengers} onChange={handleInputChange}
-                          rows="1" className="w-full border px-2 py-1 focus:outline-none"></textarea>
-                      </div>
-
-                      <div>
-                        <div className="bg-yellow-50 p-2 rounded text-xs mb-1">
-                          <strong>NOTE:</strong> The attached Medical, Employment and Insurance Authorizations are to be signed only if you intend to file a claim for injuries.
-                          Were you injured? If so, what is the nature of your injury?:
-                        </div>
-                        <textarea name="wereYouInjured" value={formData.wereYouInjured} onChange={handleInputChange}
-                          rows="1" className="w-full border px-2 py-1 focus:outline-none"></textarea>
-                      </div>
-
-                      <div>
-                        <label className="block font-medium mb-1">Do you intend to seek medical attention?:</label>
-                        <textarea name="seekingMedicalAttention" value={formData.seekingMedicalAttention} onChange={handleInputChange}
-                          rows="1" className="w-full border px-2 py-1 focus:outline-none"></textarea>
-                      </div>
-
-                      <div>
-                        <div className="flex items-center gap-4 mb-2">
-                          <span className="text-xs">Did you place your medical injury claim under your own insurance?</span>
-                          <label className="flex items-center gap-1">
-                            <input type="checkbox" name="medicalClaim" checked={formData.medicalClaim === 'yes'}
-                              onChange={(e) => handleInputChange({target: {name: 'medicalClaim', value: e.target.checked ? 'yes' : ''}})}
-                              className="print:hidden" />
-                            <span>Yes</span>
-                          </label>
-                          <label className="flex items-center gap-1">
-                            <input type="checkbox" name="medicalClaim" checked={formData.medicalClaim === 'no'}
-                              onChange={(e) => handleInputChange({target: {name: 'medicalClaim', value: e.target.checked ? 'no' : ''}})}
-                              className="print:hidden" />
-                            <span>No</span>
-                          </label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs">If yes, Name of Medical Carrier:</span>
-                          <input type="text" name="medicalCarrier" value={formData.medicalCarrier} onChange={handleInputChange}
-                            className="flex-1 border-b px-2 py-1 focus:outline-none" />
-                        </div>
-                      </div>
-
-                      <div className="border-t my-1"></div>
-                      <div>
-                        <label className="block font-medium mb-1">Is there anything else you would like us to know?:</label>
-                        <textarea name="anythingElse" value={formData.anythingElse} onChange={handleInputChange}
-                          rows="1" className="w-full border px-2 py-1 focus:outline-none"></textarea>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 mt-3">
-                        <div>
-                          <label className="block font-medium mb-1">Date:</label>
-                          <input type="date" name="dateForm1" value={formData.dateForm1} onChange={handleInputChange}
-                            className="w-full border-b px-2 py-1 focus:outline-none" />
-                        </div>
-                        <SignatureField formNum={4} sigImage={sigImage4} label="Signature" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </>
+              </div>
             )}
 
             {/* Instructions */}
