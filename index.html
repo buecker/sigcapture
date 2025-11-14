@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Guardian Insurance Authorization Forms</title>
+  <script src="https://www.sigplusweb.com/SigWebTablet.js"></script>
+  <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print {
+      .print\:hidden { display: none !important; }
+      .print-page { page-break-after: always !important; padding: 0.5in !important; page-break-inside: avoid !important; box-sizing: border-box; width: 100% !important; }
+      .print-page:last-of-type { page-break-after: auto !important; }
+      /* Per-page scaling so specific pages fit better when using 'fit to page' */
+      .print-scale-96 { -webkit-transform: scale(0.96); transform: scale(0.96); transform-origin: top left; width: calc(100% / 0.96) !important; padding: 0.25in !important; }
+      .print-scale-80 { -webkit-transform: scale(0.80); transform: scale(0.80); transform-origin: top left; width: calc(100% / 0.80) !important; }
+      .print-scale-75 { -webkit-transform: scale(0.75); transform: scale(0.75); transform-origin: top left; width: calc(100% / 0.75) !important; padding: 0.25in !important; }
+      .print-scale-70 { -webkit-transform: scale(0.70); transform: scale(0.70); transform-origin: top left; width: calc(100% / 0.70) !important; padding: 0.25in !important; }
+      .print-scale-65 { -webkit-transform: scale(0.65); transform: scale(0.65); transform-origin: top left; width: calc(100% / 0.65) !important; padding: 0.25in !important; }
+      .print-scale-60 { -webkit-transform: scale(0.60); transform: scale(0.60); transform-origin: top left; width: calc(100% / 0.60) !important; padding: 0.2in !important; }
+      input, textarea { border-bottom: 1px solid #000 !important; background: transparent !important; }
+    }
+    .signature-button { transition: all 0.2s ease; }
+    .signature-button:hover { transform: translateY(-1px); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function GuardianFormsApp() {
+      const [formData, setFormData] = useState({
+        fullName: '', dateForm1: '', dateForm2: '', printName1: '', printName2: '',
+        dateOfBirth1: '', dateOfBirth2: '', ssn1: '', ssn2: '',
+        medicareEnrolled: '', medicareClaimNumber: '', medicareGender: '', ifrClaimNumber: '', refusalReason: '', completingPersonName: '',
+        yourName: '', mailingAddress: '', physicalAddress: '', homePhone: '', busPhone: '', cellPhone: '', email: '',
+        dateOfAccident: '', locationOfAccident: '', yearMakeModel: '', licensePlate: '', color: '', vinNumber: '',
+        lienholder: '', damageDescription: '', vehicleLocation: '', accidentDescription: '',
+        chargedByPolice: '', chargeDetails: '', acceptingResponsibility: '', responsibilityReason: '',
+        insuredWithGuardian: '', insuranceCompanyName: '', filedClaimWithOwnInsurance: '', paidByOwnInsurance: '',
+        amountPaid: '', datePaid: '', witnessesPresent: '', passengers: '', passengersInCar: '',
+        wereYouInjured: '', seekingMedicalAttention: '', medicalClaim: '', medicalCarrier: '', anythingElse: '', claimNumber: ''
+      });
+
+      const [sigImage1, setSigImage1] = useState(null);
+      const [sigImage2, setSigImage2] = useState(null);
+      const [sigImage3, setSigImage3] = useState(null);
+      const [sigImage4, setSigImage4] = useState(null);
+      const [currentForm, setCurrentForm] = useState(1);
+      const [currentSubPage, setCurrentSubPage] = useState(null);
+      const [sigWebStatus, setSigWebStatus] = useState('checking');
+      const [showPrintMenu, setShowPrintMenu] = useState(false);
+      const [printAllForms, setPrintAllForms] = useState(false);
+
+      useEffect(() => {
+        if (typeof SigWebTablet === 'undefined') {
+          setSigWebStatus('not_loaded');
+          return;
+        }
+        setTimeout(() => {
+          try {
+            if (SigWebTablet.IsSigWebInstalled()) {
+              const version = SigWebTablet.GetSigWebVersion();
+              if (!version || version === "1.5") {
+                setSigWebStatus('not_loaded');
+              } else {
+                // Try to get tablet model to check if device is connected
+                const model = SigWebTablet.GetTabletModel();
+                if (model && model.length > 0) {
+                  setSigWebStatus('ready');
+                } else {
+                  setSigWebStatus('no_device');
+                }
+              }
+            } else {
+              setSigWebStatus('not_loaded');
+            }
+          } catch (e) {
+            setSigWebStatus('no_device');
+          }
+        }, 500);
+      }, []);
+
+      const handleInputChange = (e) => {
+        setFormData({...formData, [e.target.name]: e.target.value});
+      };
+
+      const captureSignature = (formNum) => {
+        if (sigWebStatus !== 'ready') {
+          let msg;
+          switch (sigWebStatus) {
+            case 'not_loaded':
+              msg = 'SigWeb service is not running. Please install or start the Topaz SigWeb service.';
+              break;
+            case 'no_device':
+              msg = 'Signature pad not detected. Please check the USB connection.';
+              break;
+            default:
+              msg = 'Signature pad is not ready.';
+          }
+          alert(msg);
+          return;
+        }
+
+        // Define the formats
+        const sigDataFormat = SigWebTablet.SignDataFormat.SigString;
+        const imageFormat = SigWebTablet.ImageFormat.PNG;
+
+        // Success callback
+        const onSignSuccess = (sigString) => {
+          console.log("Signature captured successfully");
+
+          // Get the image data to display
+          SigWebTablet.GetSignatureImage((imgData) => {
+            const imageData = 'data:image/png;base64,' + imgData;
+            if (formNum === 1) setSigImage1(imageData);
+            else if (formNum === 2) setSigImage2(imageData);
+            else if (formNum === 3) setSigImage3(imageData);
+            else if (formNum === 4) setSigImage4(imageData);
+          }, imageFormat);
+        };
+
+        // Error callback
+        const onSignError = (errorMsg) => {
+          console.error("Signature Error:", errorMsg);
+          alert("Signature capture failed or was cancelled.");
+        };
+
+        // Call the Sign function
+        SigWebTablet.Sign(
+          onSignSuccess,
+          onSignError,
+          sigDataFormat,
+          imageFormat
+        );
+      };
+
+      const clearSignature = (formNum) => {
+        if (formNum === 1) setSigImage1(null);
+        else if (formNum === 2) setSigImage2(null);
+        else if (formNum === 3) setSigImage3(null);
+        else if (formNum === 4) setSigImage4(null);
+      };
+
+      const handlePrint = (formNum = null, pageNum = null) => {
+        if (formNum === null) {
+          setPrintAllForms(true);
+          setTimeout(() => { window.print(); setPrintAllForms(false); }, 500);
+        } else {
+          const backupForm = currentForm;
+          const backupSub = currentSubPage;
+          setCurrentForm(formNum);
+          // If pageNum is null, render all pages for that form; otherwise render only that page
+          setCurrentSubPage(pageNum === null ? null : pageNum);
+          setTimeout(() => { window.print(); setCurrentForm(backupForm); setCurrentSubPage(backupSub); }, 500);
+        }
+        setShowPrintMenu(false);
+      };
+
+      const SignatureField = ({formNum, sigImage, label}) => (
+        <div>
+          <label className="block text-sm font-medium mb-1">{label}:</label>
+          {sigImage ? (
+            <div className="relative">
+              <img src={sigImage} alt="Signature" className="border border-gray-300 h-16 w-full object-contain" />
+              <button onClick={() => clearSignature(formNum)}
+                className="absolute top-0 right-0 bg-red-500 text-white px-2 py-1 text-xs rounded print:hidden hover:bg-red-600">
+                Clear
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => captureSignature(formNum)} disabled={sigWebStatus !== 'ready'}
+              className={`signature-button flex items-center gap-2 px-4 py-2 rounded-lg print:hidden ${
+                sigWebStatus === 'ready' ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}>
+              ✍️ Sign with Topaz
+            </button>
+          )}
+        </div>
+      );
+
+      return (
+        <div className="min-h-screen bg-gray-100 p-4">
+          <div className="max-w-4xl mx-auto">
+            {/* Header */}
+            <div className="bg-white rounded-lg shadow-md p-6 mb-6 print:hidden">
+              <h1 className="text-2xl font-bold mb-4">Guardian Insurance Authorization Forms</h1>
+              
+              {/* Status */}
+              <div className={`px-3 py-2 rounded border mb-4 ${
+                sigWebStatus === 'ready' ? 'bg-green-50 border-green-300 text-green-800' :
+                sigWebStatus === 'no_device' ? 'bg-yellow-50 border-yellow-300 text-yellow-800' :
+                'bg-red-50 border-red-300 text-red-800'
+              }`}>
+                {sigWebStatus === 'ready' ? '✅ Signature Pad Connected' :
+                 sigWebStatus === 'no_device' ? '⚠️ Signature pad not detected' :
+                 '❌ SigWeb Not Available'}
+              </div>
+
+              {/* Tabs */}
+              <div className="flex gap-2 mb-4">
+                {[
+                  {num: 1, label: 'Employment'},
+                  {num: 2, label: 'Insurance'},
+                  {num: 3, label: 'Medical'},
+                  {num: 4, label: 'Loss Notice'}
+                ].map(({num, label}) => (
+                  <button key={num} onClick={() => { setCurrentForm(num); if (num === 3 || num === 4) setCurrentSubPage(1); else setCurrentSubPage(null); }}
+                    className={`flex-1 py-2 px-4 rounded-lg font-medium ${
+                      currentForm === num ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300'
+                    }`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Print Menu */}
+              <div className="relative">
+                <button onClick={() => setShowPrintMenu(!showPrintMenu)}
+                  className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+                  🖨️ Print {showPrintMenu ? '▲' : '▼'}
+                </button>
+                {showPrintMenu && (
+                  <div className="absolute right-0 mt-2 w-72 bg-white rounded shadow-lg border z-50">
+                    <button onClick={() => handlePrint(null)} className="w-full text-left px-4 py-2 hover:bg-gray-100">Print All</button>
+                    <button onClick={() => handlePrint(1)} className="w-full text-left px-4 py-2 hover:bg-gray-100">Print Employment</button>
+                    <button onClick={() => handlePrint(2)} className="w-full text-left px-4 py-2 hover:bg-gray-100">Print Insurance</button>
+                    <div className="border-t"></div>
+                    <button onClick={() => handlePrint(3)} className="w-full text-left px-4 py-2 hover:bg-gray-100">Print Medical (All Pages)</button>
+                    <button onClick={() => handlePrint(3,1)} className="w-full text-left px-4 py-2 hover:bg-gray-100">Print Medical - Page 1</button>
+                    <button onClick={() => handlePrint(3,2)} className="w-full text-left px-4 py-2 hover:bg-gray-100">Print Medical - Page 2</button>
+                    <div className="border-t"></div>
+                    <button onClick={() => handlePrint(4)} className="w-full text-left px-4 py-2 hover:bg-gray-100">Print Loss Notice (All Pages)</button>
+                    <button onClick={() => handlePrint(4,1)} className="w-full text-left px-4 py-2 hover:bg-gray-100">Print Loss Notice - Page 1</button>
+                    <button onClick={() => handlePrint(4,2)} className="w-full text-left px-4 py-2 hover:bg-gray-100">Print Loss Notice - Page 2</button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Form 1: Employment Authorization */}
+            {(currentForm === 1 || printAllForms) && (
+              <div className="bg-white rounded-lg shadow-md p-8 print-page">
+                <div className="border-2 border-gray-300 p-8">
+                  <div className="flex justify-between mb-6">
+                    <div>
+                      <img src="guardian.png" alt="Guardian Insurance" className="h-12" />
+                    </div>
+                    <div className="text-right text-sm">
+                      <div>9716 Estate Thomas Suite 200</div>
+                      <div>St. Thomas, VI 00802</div>
+                      <div>Tel: (340)776-8050</div>
+                      <div>Fax: (340)774-2343</div>
+                    </div>
+                    <div className="text-right font-bold">
+                      EMPLOYMENT RECORDS<br/>AUTHORIZATION
+                    </div>
+                  </div>
+
+                  <div className="mb-6 text-sm leading-relaxed">
+                    I, <input type="text" name="fullName" value={formData.fullName} onChange={handleInputChange}
+                      className="border-b border-gray-400 px-2 py-1 w-64 focus:outline-none" placeholder="Enter full name" /> undersigned,
+                    hereby authorize any person, corporation, entity or governmental agency, department or subdivision or office to provide
+                    to GUARDIAN INSURANCE COMPANY or their authorized representative, any and all information and records pertaining to my
+                    employment, including but not limited to my personnel records, my wages or salary, dates of employment and of absences
+                    from work, compensation for absences from work, employment benefits, and job description. I further authorize the release
+                    of any and all records pertaining to any Workmen's Compensation claims or proceedings, or any claims or proceedings before
+                    the Virgin Islands Department of Labor or any claim or proceeding before the Social Security Administration. A photocopy
+                    of this Authorization shall be considered as valid as the original.
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">DATED:</label>
+                        <input type="date" name="dateForm1" value={formData.dateForm1} onChange={handleInputChange}
+                          className="w-full border-b border-gray-400 px-2 py-1 focus:outline-none" />
+                      </div>
+                      <SignatureField formNum={1} sigImage={sigImage1} label="Signature" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Print Name:</label>
+                      <input type="text" name="printName1" value={formData.printName1} onChange={handleInputChange}
+                        className="w-full border-b border-gray-400 px-2 py-1 focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Date of Birth:</label>
+                      <input type="date" name="dateOfBirth1" value={formData.dateOfBirth1} onChange={handleInputChange}
+                        className="w-full border-b border-gray-400 px-2 py-1 focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Social Security Number:</label>
+                      <input type="text" name="ssn1" value={formData.ssn1} onChange={handleInputChange} placeholder="XXX-XX-XXXX"
+                        className="w-full border-b border-gray-400 px-2 py-1 focus:outline-none" />
+                    </div>
+                    <div className="mt-12">
+                      <label className="block text-sm font-medium">NOTARY PUBLIC:</label>
+                      <div className="border-t border-gray-300 mt-2 pt-8"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Form 2: Insurance Records Authorization */}
+            {(currentForm === 2 || printAllForms) && (
+              <div className="bg-white rounded-lg shadow-md p-8 print-page">
+                <div className="border-2 border-gray-300 p-8">
+                  <div className="flex justify-between mb-6">
+                    <div>
+                      <img src="guardian.png" alt="Guardian Insurance" className="h-12" />
+                    </div>
+                    <div className="text-right text-sm">
+                      <div>9716 Estate Thomas Suite 200</div>
+                      <div>St. Thomas, VI 00802</div>
+                      <div>Tel: (340)776-8050</div>
+                      <div>Fax: (340)774-2343</div>
+                    </div>
+                    <div className="text-right font-bold">
+                      INSURANCE RECORDS<br/>AUTHORIZATION
+                    </div>
+                  </div>
+
+                  <div className="mb-6 text-sm leading-relaxed space-y-3">
+                    <div>
+                      I, <input type="text" name="fullName" value={formData.fullName} onChange={handleInputChange}
+                        className="border-b border-gray-400 px-2 py-1 w-48 focus:outline-none" placeholder="Enter full name" /> do hereby
+                      authorize any insurance company, agency or bank, public or private adjuster, who has issued or holds a policy or agreement
+                      for insurance and/or who may have in their possession any documents relating to any and all claims that I/we may have had
+                      or currently have regarding any accident or incident under a policy of insurance with their agency or company of or for the
+                      benefit of the undersigned either under primary, excess umbrella coverage to provide to Guardian Insurance Company or any
+                      of its authorized representatives any and all information including, but not limited to any applications for insurance,
+                      photographs and descriptions of the insured vehicles, property/premise, endorsements, certificates of insurance, questionnaires
+                      and sworn statements and Proof of Loss, Claims or Lost Documents, and payment information on any claim or loss.
+                    </div>
+                    <div>
+                      A photo static copy of this authorization should be considered as effective and valid as the original.
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <SignatureField formNum={2} sigImage={sigImage2} label="Signature" />
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Date:</label>
+                        <input type="date" name="dateForm2" value={formData.dateForm2} onChange={handleInputChange}
+                          className="w-full border-b border-gray-400 px-2 py-1 focus:outline-none" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Print Name:</label>
+                      <input type="text" name="printName2" value={formData.printName2} onChange={handleInputChange}
+                        className="w-full border-b border-gray-400 px-2 py-1 focus:outline-none" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Date of Birth:</label>
+                        <input type="date" name="dateOfBirth2" value={formData.dateOfBirth2} onChange={handleInputChange}
+                          className="w-full border-b border-gray-400 px-2 py-1 focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">SSN:</label>
+                        <input type="text" name="ssn2" value={formData.ssn2} onChange={handleInputChange}
+                          className="w-full border-b border-gray-400 px-2 py-1 focus:outline-none" />
+                      </div>
+                    </div>
+                    <div className="mt-12">
+                      <label className="block text-sm font-medium">NOTARY PUBLIC:</label>
+                      <div className="border-t border-gray-300 mt-2 pt-8"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Form 3: Medical - Medicare + Authorization (2 pages) */}
+            {(((currentForm === 3) && (currentSubPage === 1 || currentSubPage === null)) || printAllForms) && (
+                /* Page 1: Medicare */
+                <div className="bg-white rounded-lg shadow-md p-8 print-page print-scale-60">
+                  <div className="border-2 border-gray-300 p-3">
+                    <h2 className="text-sm font-bold text-center mb-1">MEDICARE INSURANCE VERIFICATION FORM</h2>
+                    <div className="text-xs mb-1 leading-tight">
+                      Section 111 of the Medicare, Medicaid and SCHIP Extension Act of 2007 (MMSEA), which became
+                      effective January 1, 2009, requires insurers to report specific information about Medicare beneficiaries who have other
+                      insurance coverage. This reporting is to assist Centers for Medicare & Medicaid Services (CMS) and other
+                      plans to properly coordinate payment of benefits among plans so that your claims are paid promptly and correctly.
+                    </div>
+
+                    <div className="text-xs font-bold mb-0.5">We are asking you to answer the questions below so we may comply with the law.</div>
+
+                    <div className="bg-gray-50 p-1.5 mb-1 flex items-start gap-2">
+                      <div className="flex-1">
+                        <strong className="text-xs">Please review this picture of the Medicare card to determine if you have, or have had, a similar Medicare card.</strong>
+                      </div>
+                      <img src="medicare.avif" alt="Medicare Card" className="border w-32" />
+                    </div>
+
+                    <div className="mb-1">
+                      <div className="bg-gray-800 text-white px-2 py-0.5 text-xs font-bold mb-1">Section I</div>
+                      <div className="mb-3 text-sm">
+                        Are you presently, or have you ever been enrolled in Medicare Part A or Part B?
+                        <span className="ml-4">
+                          <label className="inline-flex items-center gap-2 mr-4">
+                            <input type="radio" name="medicareEnrolled" value="no" checked={formData.medicareEnrolled === 'no'}
+                              onChange={handleInputChange} className="print:hidden" />
+                            <span>NO - Proceed to Section II</span>
+                          </label>
+                          <label className="inline-flex items-center gap-2">
+                            <input type="radio" name="medicareEnrolled" value="yes" checked={formData.medicareEnrolled === 'yes'}
+                              onChange={handleInputChange} className="print:hidden" />
+                            <span>YES - Proceed to Section I + II</span>
+                          </label>
+                        </span>
+                      </div>
+                      <div className="space-y-0.5">
+                        <div>
+                          <label className="block text-xs mb-0">Full Name: (Please print the name exactly as it appears on your Medicare Card if available)</label>
+                          <input type="text" name="fullName" value={formData.fullName} onChange={handleInputChange}
+                            className="w-full border-b border-gray-400 px-1 py-0 focus:outline-none text-xs" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <div>
+                            <label className="block text-xs mb-0">Medicare Claim Number:</label>
+                            <input type="text" name="medicareClaimNumber" value={formData.medicareClaimNumber} onChange={handleInputChange}
+                              className="w-full border-b border-gray-400 px-1 py-0 focus:outline-none text-xs" />
+                          </div>
+                          <div>
+                            <label className="block text-xs mb-0">Date of Birth: (Mo/Day/Year)</label>
+                            <input type="date" name="dateOfBirth1" value={formData.dateOfBirth1} onChange={handleInputChange}
+                              className="w-full border-b border-gray-400 px-1 py-0 focus:outline-none text-xs" />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <div>
+                            <label className="block text-xs mb-0">Social Security Number:</label>
+                            <input type="text" name="ssn1" value={formData.ssn1} onChange={handleInputChange}
+                              className="w-full border-b border-gray-400 px-1 py-0 focus:outline-none text-xs" />
+                          </div>
+                          <div>
+                            <label className="block text-xs mb-0">Gender:</label>
+                            <div className="flex gap-2">
+                              <label className="flex items-center gap-0.5 text-xs">
+                                <input type="checkbox" name="medicareGender" checked={formData.medicareGender === 'F'}
+                                  onChange={(e) => handleInputChange({target: {name: 'medicareGender', value: e.target.checked ? 'F' : ''}})}
+                                  className="print:hidden" />
+                                <span>Female</span>
+                              </label>
+                              <label className="flex items-center gap-0.5 text-xs">
+                                <input type="checkbox" name="medicareGender" checked={formData.medicareGender === 'M'}
+                                  onChange={(e) => handleInputChange({target: {name: 'medicareGender', value: e.target.checked ? 'M' : ''}})}
+                                  className="print:hidden" />
+                                <span>Male</span>
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mb-1">
+                      <div className="bg-gray-800 text-white px-2 py-0.5 text-xs font-bold mb-0.5">Section II</div>
+                      <div className="text-xs mb-0.5 italic leading-tight">
+                        I understand that the information requested is to assist the SC Insurance Reserve Fund to accurately coordinate
+                        benefits with Medicare and to meet its mandatory reporting obligation under the Medicare law.
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <div>
+                            <label className="block text-xs mb-0">Claimant Name (Please Print)</label>
+                            <input type="text" name="printName1" value={formData.printName1} onChange={handleInputChange}
+                              className="w-full border-b border-gray-400 px-1 py-0 focus:outline-none text-xs" />
+                          </div>
+                          <div>
+                            <label className="block text-xs mb-0">IRF Claim Number (IRF use only)</label>
+                            <input type="text" name="ifrClaimNumber" value={formData.ifrClaimNumber} onChange={handleInputChange}
+                              className="w-full border-b border-gray-400 px-1 py-0 focus:outline-none text-xs" />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs mb-0">Name of Person Completing This Form If Claimant is Unable (Please Print)</label>
+                          <input type="text" name="completingPersonName" value={formData.completingPersonName} onChange={handleInputChange}
+                            className="w-full border-b border-gray-400 px-1 py-0 focus:outline-none text-xs" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <SignatureField formNum={3} sigImage={sigImage3} label="Signature of Person Completing This Form" />
+                          <div>
+                            <label className="block text-xs mb-0">Date:</label>
+                            <input type="date" name="dateForm1" value={formData.dateForm1} onChange={handleInputChange}
+                              className="w-full border-b border-gray-400 px-1 py-0 focus:outline-none text-xs" />
+                          </div>
+                        </div>
+                        <div className="text-xs mt-0.5 leading-tight">
+                          <span>If you have completed Sections I and II above, <strong>stop here</strong>. </span>
+                          <span>If you are <strong>refusing</strong> to provide the requested information in Sections I and II, <strong>complete Section III</strong>.</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mb-0">
+                      <div className="bg-gray-800 text-white px-2 py-0.5 text-xs font-bold mb-0.5">Section III</div>
+                      <div className="space-y-0.5">
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <div>
+                            <label className="block text-xs mb-0">Claimant Name (Please Print)</label>
+                            <input type="text" name="printName1" value={formData.printName1} onChange={handleInputChange}
+                              className="w-full border-b border-gray-400 px-1 py-0 focus:outline-none text-xs" />
+                          </div>
+                          <div>
+                            <label className="block text-xs mb-0">IRF Claim Number (IRF use only)</label>
+                            <input type="text" name="ifrClaimNumber" value={formData.ifrClaimNumber} onChange={handleInputChange}
+                              className="w-full border-b border-gray-400 px-1 py-0 focus:outline-none text-xs" />
+                          </div>
+                        </div>
+                        <div className="text-xs mb-2 leading-tight">
+                          For the reason(s) listed below, I have not provided the information requested. I understand that if I am
+                          a Medicare beneficiary and I do not provide the requested information, I may be violating obligations as
+                          a Medicare beneficiary which may affect my entitlement to Medicare benefits and result in a penalty imposed
+                          by the Centers for Medicare and Medicaid Services (CMS).
+                        </div>
+                        <div>
+                          <label className="block text-xs mb-0.5">Reason(s) for Refusal to Provide Requested Information:</label>
+                          <textarea name="refusalReason" value={formData.refusalReason} onChange={handleInputChange}
+                            rows="1" className="w-full border border-gray-400 px-1 py-0 focus:outline-none text-xs leading-tight"></textarea>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <SignatureField formNum={3} sigImage={sigImage3} label="Signature of Person Completing This Form" />
+                          <div>
+                            <label className="block text-xs mb-0">Date:</label>
+                            <input type="date" name="dateForm1" value={formData.dateForm1} onChange={handleInputChange}
+                              className="w-full border-b border-gray-400 px-1 py-0 focus:outline-none text-xs" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+            )}
+
+            {(((currentForm === 3) && (currentSubPage === 2 || currentSubPage === null)) || printAllForms) && (
+                /* Page 2: Medical Authorization */
+                <div className="bg-white rounded-lg shadow-md p-8 print-page print-scale-80">
+                  <div className="border-2 border-gray-300 p-8">
+                    <div className="flex justify-between mb-6">
+                      <div>
+                        <img src="guardian.png" alt="Guardian Insurance" className="h-12" />
+                      </div>
+                      <div className="text-right text-sm">
+                        <div>9716 Estate Thomas Suite 200</div>
+                        <div>St. Thomas, USVI 00802</div>
+                        <div>Tel: (340)776-8050</div>
+                      </div>
+                      <div className="text-right font-bold">
+                        MEDICAL / HEALTH INFORMATION<br/>Authorization to Disclose
+                      </div>
+                    </div>
+
+                    <div className="text-sm mb-6 leading-relaxed space-y-3">
+                      <div>
+                        I, <input type="text" name="fullName" value={formData.fullName} onChange={handleInputChange}
+                          className="border-b border-gray-400 px-2 py-1 w-64 focus:outline-none"
+                          placeholder="Enter full name" /> authorize all medical sources (physicians, psychiatrists,
+                        hospitals, clinics, labs, psychologists, pharmacies, health care professionals, etc.) including
+                        mental health, correctional, additional treatment, and VA health care facilities, to disclose
+                        medical or health records and other information regarding treatment, hospitalizations and outpatient
+                        care to include but not limited to the entire record. This authorization is to include sexually
+                        transmitted disease records and the results of any blood or bodily fluid test designed to detect
+                        HIV/AIDS, as well as genetic and prescription information.
+                      </div>
+                      <div>
+                        I understand the information in my health record may include information relating to sexually
+                        transmitted disease, acquired immunodeficiency syndrome (AIDS), or human immunodeficiency virus
+                        (HIV). It may also include information about behavioral or mental health services, and treatment
+                        for alcohol and drug abuse.
+                      </div>
+                      <div>
+                        The information identified above may be used by or disclosed to <strong>Guardian Insurance Company,
+                        P.O. Box 9109, St. Thomas, VI 00804</strong> or any of its authorized representatives. This
+                        information for which I am authorizing disclosure will be used for the purpose of evaluating my
+                        claim, treatment and costs as it pertains to a claim for Bodily Injury compensation.
+                      </div>
+                      <div>
+                        This authorization will expire upon the resolution of my claim or legal procedure instituted by me.
+                        I understand that I have the right to revoke this authorization at any time. I understand that if I
+                        revoke this authorization, I must do so in writing and present my written revocation to the <strong>Guardian
+                        Insurance Company</strong>. I understand that the revocation will not apply to information that has
+                        already been released in response to this authorization.
+                      </div>
+                      <div>
+                        I understand that once the above information is disclosed, it may be re-disclosed by the recipient
+                        and the information may not be protected by federal privacy laws or regulations.
+                      </div>
+                      <div className="font-semibold">
+                        A PHOTOSTAT OR CARBON COPY OF THIS AUTHORIZATION SHALL BE CONSIDERED AS EFFECTIVE AND VALID AS THE ORIGINAL.
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mt-8">
+                      <SignatureField formNum={3} sigImage={sigImage3} label="Signature" />
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Date:</label>
+                        <input type="date" name="dateForm2" value={formData.dateForm2} onChange={handleInputChange}
+                          className="w-full border-b border-gray-400 px-2 py-1 focus:outline-none" />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4 mt-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Print Name:</label>
+                        <input type="text" name="printName2" value={formData.printName2 || formData.printName1} onChange={handleInputChange}
+                          className="w-full border-b border-gray-400 px-2 py-1 focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Date of Birth:</label>
+                        <input type="date" name="dateOfBirth2" value={formData.dateOfBirth2 || formData.dateOfBirth1} onChange={handleInputChange}
+                          className="w-full border-b border-gray-400 px-2 py-1 focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Social Security No.:</label>
+                        <input type="text" name="ssn2" value={formData.ssn2 || formData.ssn1} onChange={handleInputChange}
+                          className="w-full border-b border-gray-400 px-2 py-1 focus:outline-none" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+            )}
+
+            {/* Form 4: Loss Notice (2 pages) */}
+            {(currentForm === 4 || printAllForms) && (
+              <>
+                {/* Page 1 */}
+                <div className="bg-white rounded-lg shadow-md p-8 print-page print-scale-75">
+                  <div className="border-2 border-gray-300 p-6">
+                    <div className="flex justify-between items-center mb-3">
+                      <img src="guardian.png" alt="Guardian" className="h-10" />
+                      <div className="text-center">
+                        <h2 className="text-base font-bold">LOSS NOTICE - AUTOMOBILE</h2>
+                        <div className="text-xs">FOR CLAIMANTS</div>
+                      </div>
+                      <div className="text-xs">Page 1 of 2</div>
+                    </div>
+
+                    <div className="space-y-2 text-sm">
+                      <div>
+                        <label className="block font-medium mb-1">DATE:</label>
+                        <input type="date" name="dateForm1" value={formData.dateForm1} onChange={handleInputChange}
+                          className="w-full border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                      <div className="border-t my-2"></div>
+                      <div>
+                        <label className="block font-medium mb-1">INSURED/POLICYHOLDER'S NAME:</label>
+                        <input type="text" name="fullName" value={formData.fullName} onChange={handleInputChange}
+                          className="w-full border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">Your Name:</label>
+                        <input type="text" name="yourName" value={formData.yourName} onChange={handleInputChange}
+                          className="w-full border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">Mailing Address:</label>
+                        <input type="text" name="mailingAddress" value={formData.mailingAddress} onChange={handleInputChange}
+                          className="w-full border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">Physical Address:</label>
+                        <input type="text" name="physicalAddress" value={formData.physicalAddress} onChange={handleInputChange}
+                          className="w-full border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="block font-medium mb-1">Home Phone:</label>
+                          <input type="tel" name="homePhone" value={formData.homePhone} onChange={handleInputChange}
+                            className="w-full border-b px-2 py-1 focus:outline-none" />
+                        </div>
+                        <div>
+                          <label className="block font-medium mb-1">Bus. Phone:</label>
+                          <input type="tel" name="busPhone" value={formData.busPhone} onChange={handleInputChange}
+                            className="w-full border-b px-2 py-1 focus:outline-none" />
+                        </div>
+                        <div>
+                          <label className="block font-medium mb-1">Cell Phone:</label>
+                          <input type="tel" name="cellPhone" value={formData.cellPhone} onChange={handleInputChange}
+                            className="w-full border-b px-2 py-1 focus:outline-none" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">Email:</label>
+                        <input type="email" name="email" value={formData.email} onChange={handleInputChange}
+                          className="w-full border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                      <div className="border-t my-2"></div>
+                      <div className="font-bold text-xs">(Please answer all questions)</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block font-medium mb-1">Date of Accident:</label>
+                          <input type="date" name="dateOfAccident" value={formData.dateOfAccident} onChange={handleInputChange}
+                            className="w-full border-b px-2 py-1 focus:outline-none" />
+                        </div>
+                        <div>
+                          <label className="block font-medium mb-1">Location of Accident:</label>
+                          <input type="text" name="locationOfAccident" value={formData.locationOfAccident} onChange={handleInputChange}
+                            className="w-full border-b px-2 py-1 focus:outline-none" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">Year / Make / Model of Car:</label>
+                        <input type="text" name="yearMakeModel" value={formData.yearMakeModel} onChange={handleInputChange}
+                          className="w-full border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block font-medium mb-1">License Plate:</label>
+                          <input type="text" name="licensePlate" value={formData.licensePlate} onChange={handleInputChange}
+                            className="w-full border-b px-2 py-1 focus:outline-none" />
+                        </div>
+                        <div>
+                          <label className="block font-medium mb-1">Color:</label>
+                          <input type="text" name="color" value={formData.color} onChange={handleInputChange}
+                            className="w-full border-b px-2 py-1 focus:outline-none" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">VIN #:</label>
+                        <input type="text" name="vinNumber" value={formData.vinNumber} onChange={handleInputChange}
+                          className="w-full border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">Lienholder/Bank on vehicle:</label>
+                        <input type="text" name="lienholder" value={formData.lienholder} onChange={handleInputChange}
+                          className="w-full border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">Identify Damage to Your Vehicle:</label>
+                        <textarea name="damageDescription" value={formData.damageDescription} onChange={handleInputChange}
+                          rows="1" className="w-full border px-2 py-1 focus:outline-none"></textarea>
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">Where is vehicle located?:</label>
+                        <input type="text" name="vehicleLocation" value={formData.vehicleLocation} onChange={handleInputChange}
+                          className="w-full border-b px-2 py-1 focus:outline-none" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Page 2 */}
+                <div className="bg-white rounded-lg shadow-md p-8 print-page print-scale-75">
+                  <div className="border-2 border-gray-300 p-6">
+                    <div className="flex justify-between items-center mb-3">
+                      <img src="guardian.png" alt="Guardian" className="h-10" />
+                      <div className="text-xs">Page 2 of 2</div>
+                    </div>
+
+                    <div className="space-y-2 text-sm">
+                      <div>
+                        <label className="block font-medium mb-1">How did the Accident Occur? (Brief Description):</label>
+                        <textarea name="accidentDescription" value={formData.accidentDescription} onChange={handleInputChange}
+                          rows="2" className="w-full border px-2 py-1 focus:outline-none"></textarea>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center gap-4 mb-2">
+                          <span className="text-xs">Were you charged by the police in this accident?</span>
+                          <label className="flex items-center gap-1">
+                            <input type="checkbox" name="chargedByPolice" checked={formData.chargedByPolice === 'yes'}
+                              onChange={(e) => handleInputChange({target: {name: 'chargedByPolice', value: e.target.checked ? 'yes' : ''}})}
+                              className="print:hidden" />
+                            <span>Yes</span>
+                          </label>
+                          <label className="flex items-center gap-1">
+                            <input type="checkbox" name="chargedByPolice" checked={formData.chargedByPolice === 'no'}
+                              onChange={(e) => handleInputChange({target: {name: 'chargedByPolice', value: e.target.checked ? 'no' : ''}})}
+                              className="print:hidden" />
+                            <span>No</span>
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs">What was the charge?:</span>
+                          <input type="text" name="chargeDetails" value={formData.chargeDetails} onChange={handleInputChange}
+                            className="flex-1 border-b px-2 py-1 focus:outline-none" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center gap-4 mb-2">
+                          <span className="text-xs">Are you accepting responsibility for this accident?</span>
+                          <label className="flex items-center gap-1">
+                            <input type="checkbox" name="acceptingResponsibility" checked={formData.acceptingResponsibility === 'yes'}
+                              onChange={(e) => handleInputChange({target: {name: 'acceptingResponsibility', value: e.target.checked ? 'yes' : ''}})}
+                              className="print:hidden" />
+                            <span>Yes</span>
+                          </label>
+                          <label className="flex items-center gap-1">
+                            <input type="checkbox" name="acceptingResponsibility" checked={formData.acceptingResponsibility === 'no'}
+                              onChange={(e) => handleInputChange({target: {name: 'acceptingResponsibility', value: e.target.checked ? 'no' : ''}})}
+                              className="print:hidden" />
+                            <span>No</span>
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs">If no, explain why?:</span>
+                          <input type="text" name="responsibilityReason" value={formData.responsibilityReason} onChange={handleInputChange}
+                            className="flex-1 border-b px-2 py-1 focus:outline-none" />
+                        </div>
+                      </div>
+
+                      <div className="border-t my-2"></div>
+
+                      <div>
+                        <div className="flex items-center gap-4 mb-2">
+                          <span className="text-xs">Are you Insured with Guardian?</span>
+                          <label className="flex items-center gap-1">
+                            <input type="checkbox" name="insuredWithGuardian" checked={formData.insuredWithGuardian === 'yes'}
+                              onChange={(e) => handleInputChange({target: {name: 'insuredWithGuardian', value: e.target.checked ? 'yes' : ''}})}
+                              className="print:hidden" />
+                            <span>Yes</span>
+                          </label>
+                          <label className="flex items-center gap-1">
+                            <input type="checkbox" name="insuredWithGuardian" checked={formData.insuredWithGuardian === 'no'}
+                              onChange={(e) => handleInputChange({target: {name: 'insuredWithGuardian', value: e.target.checked ? 'no' : ''}})}
+                              className="print:hidden" />
+                            <span>No</span>
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs">Name of Insurance Company or Agent:</span>
+                          <input type="text" name="insuranceCompanyName" value={formData.insuranceCompanyName} onChange={handleInputChange}
+                            className="flex-1 border-b px-2 py-1 focus:outline-none" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block font-medium mb-1">Have you Filed a Claim with your own Insurance Company?:</label>
+                        <input type="text" name="filedClaimWithOwnInsurance" value={formData.filedClaimWithOwnInsurance} onChange={handleInputChange}
+                          className="w-full border-b px-2 py-1 focus:outline-none" />
+                      </div>
+
+                      <div>
+                        <label className="block font-medium mb-1">Have you been paid by your own Insurance Company?:</label>
+                        <input type="text" name="paidByOwnInsurance" value={formData.paidByOwnInsurance} onChange={handleInputChange}
+                          className="w-full border-b px-2 py-1 focus:outline-none" />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block font-medium mb-1">Amount Paid:</label>
+                          <input type="text" name="amountPaid" value={formData.amountPaid} onChange={handleInputChange}
+                            className="w-full border-b px-2 py-1 focus:outline-none" />
+                        </div>
+                        <div>
+                          <label className="block font-medium mb-1">Date Paid:</label>
+                          <input type="date" name="datePaid" value={formData.datePaid} onChange={handleInputChange}
+                            className="w-full border-b px-2 py-1 focus:outline-none" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block font-medium mb-1">Were there any witnesses?:</label>
+                        <textarea name="witnessesPresent" value={formData.witnessesPresent} onChange={handleInputChange}
+                          rows="1" className="w-full border px-2 py-1 focus:outline-none"></textarea>
+                      </div>
+
+                      <div className="font-bold text-xs my-2">TELL US ABOUT ANY INJURIES (Please answer all questions)</div>
+
+                      <div>
+                        <div className="flex items-center gap-4 mb-2">
+                          <span className="text-xs">Were there any passengers in your car?</span>
+                          <label className="flex items-center gap-1">
+                            <input type="checkbox" name="passengersInCar" checked={formData.passengersInCar === 'yes'}
+                              onChange={(e) => handleInputChange({target: {name: 'passengersInCar', value: e.target.checked ? 'yes' : ''}})}
+                              className="print:hidden" />
+                            <span>Yes</span>
+                          </label>
+                          <label className="flex items-center gap-1">
+                            <input type="checkbox" name="passengersInCar" checked={formData.passengersInCar === 'no'}
+                              onChange={(e) => handleInputChange({target: {name: 'passengersInCar', value: e.target.checked ? 'no' : ''}})}
+                              className="print:hidden" />
+                            <span>No</span>
+                          </label>
+                        </div>
+                        <label className="block font-medium mb-1 text-xs">If so, list names:</label>
+                        <textarea name="passengers" value={formData.passengers} onChange={handleInputChange}
+                          rows="1" className="w-full border px-2 py-1 focus:outline-none"></textarea>
+                      </div>
+
+                      <div>
+                        <div className="bg-yellow-50 p-2 rounded text-xs mb-1">
+                          <strong>NOTE:</strong> The attached Medical, Employment and Insurance Authorizations are to be signed only if you intend to file a claim for injuries.
+                          Were you injured? If so, what is the nature of your injury?:
+                        </div>
+                        <textarea name="wereYouInjured" value={formData.wereYouInjured} onChange={handleInputChange}
+                          rows="1" className="w-full border px-2 py-1 focus:outline-none"></textarea>
+                      </div>
+
+                      <div>
+                        <label className="block font-medium mb-1">Do you intend to seek medical attention?:</label>
+                        <textarea name="seekingMedicalAttention" value={formData.seekingMedicalAttention} onChange={handleInputChange}
+                          rows="1" className="w-full border px-2 py-1 focus:outline-none"></textarea>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center gap-4 mb-2">
+                          <span className="text-xs">Did you place your medical injury claim under your own insurance?</span>
+                          <label className="flex items-center gap-1">
+                            <input type="checkbox" name="medicalClaim" checked={formData.medicalClaim === 'yes'}
+                              onChange={(e) => handleInputChange({target: {name: 'medicalClaim', value: e.target.checked ? 'yes' : ''}})}
+                              className="print:hidden" />
+                            <span>Yes</span>
+                          </label>
+                          <label className="flex items-center gap-1">
+                            <input type="checkbox" name="medicalClaim" checked={formData.medicalClaim === 'no'}
+                              onChange={(e) => handleInputChange({target: {name: 'medicalClaim', value: e.target.checked ? 'no' : ''}})}
+                              className="print:hidden" />
+                            <span>No</span>
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs">If yes, Name of Medical Carrier:</span>
+                          <input type="text" name="medicalCarrier" value={formData.medicalCarrier} onChange={handleInputChange}
+                            className="flex-1 border-b px-2 py-1 focus:outline-none" />
+                        </div>
+                      </div>
+
+                      <div className="border-t my-1"></div>
+                      <div>
+                        <label className="block font-medium mb-1">Is there anything else you would like us to know?:</label>
+                        <textarea name="anythingElse" value={formData.anythingElse} onChange={handleInputChange}
+                          rows="1" className="w-full border px-2 py-1 focus:outline-none"></textarea>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 mt-3">
+                        <div>
+                          <label className="block font-medium mb-1">Date:</label>
+                          <input type="date" name="dateForm1" value={formData.dateForm1} onChange={handleInputChange}
+                            className="w-full border-b px-2 py-1 focus:outline-none" />
+                        </div>
+                        <SignatureField formNum={4} sigImage={sigImage4} label="Signature" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Instructions */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6 print:hidden">
+              <h3 className="font-bold text-blue-900 mb-2">Instructions for Topaz T-S460-HSB-R:</h3>
+              <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
+                <li>Ensure your Topaz T-S460-HSB-R signature pad is connected via USB</li>
+                <li>Check that device status shows "Device Connected" above</li>
+                <li>Fill out all required fields in the forms</li>
+                <li>Click "Sign with Topaz" to capture signatures</li>
+                <li>Sign on the physical signature pad when prompted</li>
+                <li>Review forms by switching between tabs</li>
+                <li>Click "Print" to print or save as PDF</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<GuardianFormsApp />, document.getElementById('root'));
+  </script>
+</body>
+</html>
