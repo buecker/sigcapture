@@ -1,0 +1,85 @@
+[ERROR] Failed to save config with lock: Error: ENOENT: no such file or directory, lstat '/home/buecker/.claude.json'
+[DEBUG] Writing to temp file: /home/buecker/.claude.json.tmp.201198.1763122667618
+[DEBUG] Setting permissions for new file: 600
+[DEBUG] Temp file written successfully, size: 103 bytes
+[DEBUG] Renaming /home/buecker/.claude.json.tmp.201198.1763122667618 to /home/buecker/.claude.json
+[DEBUG] File /home/buecker/.claude.json written atomically
+[DEBUG] [LSP MANAGER] initializeLspServerManager() called
+[DEBUG] [LSP MANAGER] Created manager instance, state=pending
+[DEBUG] [LSP MANAGER] Starting async initialization (generation 1)
+[DEBUG] [LSP SERVER MANAGER] initialize() called
+[DEBUG] [LSP SERVER MANAGER] Calling getAllLspServers()
+[DEBUG] Writing to temp file: /home/buecker/.claude.json.tmp.201198.1763122667633
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 183 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/buecker/.claude.json.tmp.201198.1763122667633 to /home/buecker/.claude.json
+[DEBUG] File /home/buecker/.claude.json written atomically
+[DEBUG] Writing to temp file: /home/buecker/.claude.json.tmp.201198.1763122667645
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 220 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/buecker/.claude.json.tmp.201198.1763122667645 to /home/buecker/.claude.json
+[DEBUG] File /home/buecker/.claude.json written atomically
+[DEBUG] Found 0 plugins (0 enabled, 0 disabled)
+[DEBUG] Total LSP servers loaded: 0
+[DEBUG] [LSP SERVER MANAGER] getAllLspServers returned 0 server(s)
+[DEBUG] LSP manager initialized with 0 servers
+[DEBUG] LSP server manager initialized successfully
+[DEBUG] LSP notification handlers registered successfully for all 0 server(s)
+[DEBUG] Loading skills from directories: managed=/etc/claude-code/.claude/skills, user=/home/buecker/.claude/skills, project=/home/buecker/.claude/skills
+[DEBUG] >>>>> getPluginSkills CALLED <<<<<
+[DEBUG] Creating shell snapshot for bash (/bin/bash)
+[DEBUG] Looking for shell config file: /home/buecker/.bashrc
+[DEBUG] Snapshots directory: /home/buecker/.claude/shell-snapshots
+[DEBUG] Creating snapshot at: /home/buecker/.claude/shell-snapshots/snapshot-bash-1763122667793-nly2qb.sh
+[DEBUG] Shell binary exists: true
+[DEBUG] Execution timeout: 10000ms
+[DEBUG] Writing to temp file: /home/buecker/.claude/todos/eec5b52c-3989-43dd-a7eb-235c4cc561cc-agent-eec5b52c-3989-43dd-a7eb-235c4cc561cc.json.tmp.201198.1763122667801
+[DEBUG] Temp file written successfully, size: 2 bytes
+[DEBUG] Renaming /home/buecker/.claude/todos/eec5b52c-3989-43dd-a7eb-235c4cc561cc-agent-eec5b52c-3989-43dd-a7eb-235c4cc561cc.json.tmp.201198.1763122667801 to /home/buecker/.claude/todos/eec5b52c-3989-43dd-a7eb-235c4cc561cc-agent-eec5b52c-3989-43dd-a7eb-235c4cc561cc.json
+[DEBUG] File /home/buecker/.claude/todos/eec5b52c-3989-43dd-a7eb-235c4cc561cc-agent-eec5b52c-3989-43dd-a7eb-235c4cc561cc.json written atomically
+[DEBUG] getPluginSkills: Processing 0 enabled plugins
+[DEBUG] Total plugin skills loaded: 0
+[DEBUG] Total plugin commands loaded: 0
+[DEBUG] Registered 0 hooks from 0 plugins
+[DEBUG] Loaded 0 unique skills (managed: 0, user: 0, project: 0, duplicates removed: 0)
+[DEBUG] getSkillsIfEnabled returning: 0 skill dir commands, 0 plugin skills
+[DEBUG] Total plugin agents loaded: 0
+[DEBUG] Shell snapshot created successfully (3176 bytes)
+[DEBUG] Writing to temp file: /home/buecker/.claude.json.tmp.201198.1763122668064
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 302 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/buecker/.claude.json.tmp.201198.1763122668064 to /home/buecker/.claude.json
+[DEBUG] File /home/buecker/.claude.json written atomically
+[DEBUG] Writing to temp file: /home/buecker/.claude.json.tmp.201198.1763122668068
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 332 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/buecker/.claude.json.tmp.201198.1763122668068 to /home/buecker/.claude.json
+[DEBUG] File /home/buecker/.claude.json written atomically
+[DEBUG] Writing to temp file: /home/buecker/.claude.json.tmp.201198.1763122668091
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37270 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/buecker/.claude.json.tmp.201198.1763122668091 to /home/buecker/.claude.json
+[DEBUG] File /home/buecker/.claude.json written atomically
+[DEBUG] Writing to temp file: /home/buecker/.claude.json.tmp.201198.1763122670010
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37270 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/buecker/.claude.json.tmp.201198.1763122670010 to /home/buecker/.claude.json
+[DEBUG] File /home/buecker/.claude.json written atomically
+[DEBUG] Writing to temp file: /home/buecker/.claude.json.tmp.201198.1763122670015
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37270 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/buecker/.claude.json.tmp.201198.1763122670015 to /home/buecker/.claude.json
+[DEBUG] File /home/buecker/.claude.json written atomically
+[DEBUG] Skipping SessionEnd:other hook execution - workspace trust not accepted
+[DEBUG] Cleaned up session snapshot: /home/buecker/.claude/shell-snapshots/snapshot-bash-1763122667793-nly2qb.sh
+[DEBUG] LSP server manager shut down successfully
+[DEBUG] BigQuery metrics exporter flush complete
+[DEBUG] BigQuery metrics exporter flush complete
+[DEBUG] BigQuery metrics exporter shutdown complete

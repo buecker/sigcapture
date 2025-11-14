@@ -1,0 +1,28 @@
+0 verbose cli /home/buecker/.nvm/versions/node/v24.11.1/bin/node /home/buecker/.nvm/versions/node/v24.11.1/bin/npm
+1 info using npm@11.6.2
+2 info using node@v24.11.1
+3 silly config load:file:/home/buecker/.nvm/versions/node/v24.11.1/lib/node_modules/npm/npmrc
+4 silly config load:file:/home/buecker/.npmrc
+5 silly config load:file:/home/buecker/.nvm/versions/node/v24.11.1/etc/npmrc
+6 verbose title npm uninstall claude-code
+7 verbose argv "uninstall" "--global" "claude-code"
+8 verbose logfile logs-max:10 dir:/home/buecker/.npm/_logs/2025-11-14T12_16_54_459Z-
+9 verbose logfile /home/buecker/.npm/_logs/2025-11-14T12_16_54_459Z-debug-0.log
+10 silly packumentCache heap:2196504576 maxSize:549126144 maxEntrySize:274563072
+11 silly logfile done cleaning log files
+12 silly idealTree buildDeps
+13 silly reify mark retired [
+13 silly reify   '/home/buecker/.nvm/versions/node/v24.11.1/lib/node_modules/claude-code',
+13 silly reify   '/home/buecker/.nvm/versions/node/v24.11.1/bin/claude-code'
+13 silly reify ]
+14 silly reify moves {
+14 silly reify   '/home/buecker/.nvm/versions/node/v24.11.1/lib/node_modules/claude-code': '/home/buecker/.nvm/versions/node/v24.11.1/lib/node_modules/.claude-code-tiWIuxM5',
+14 silly reify   '/home/buecker/.nvm/versions/node/v24.11.1/bin/claude-code': '/home/buecker/.nvm/versions/node/v24.11.1/bin/.claude-code-n554tVtG'
+14 silly reify }
+15 silly REMOVE node_modules/claude-code
+16 verbose cwd /home/buecker
+17 verbose os Linux 6.8.0-87-generic
+18 verbose node v24.11.1
+19 verbose npm  v11.6.2
+20 verbose exit 0
+21 info ok
